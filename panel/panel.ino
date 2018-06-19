@@ -39,11 +39,8 @@ class WTFButton {
             senseCurrent = touchRead(sensePin);
             if (senseCurrent > senseThreshold ) {
                 state = true;
-                Serial.print("\t");
+                Serial.print(",");
                 Serial.print(sensePin);
-                Serial.print(" ");
-                Serial.print(senseCurrent);
-                Serial.print(" ");
             } else {
                 state = false;
             }
@@ -124,7 +121,7 @@ void loop()
 {
     BRIGHT=counter/10;
     checkButton();
-    Serial.print("Touch sensor:");
+    Serial.print("[0");
 
     for (int i = 0; i < NUM_LEDS; i++) {
          leds[i] = CHSV(0,255,0);
@@ -138,7 +135,7 @@ void loop()
 
     FastLED.show();
 
-    Serial.println(" ");
+    Serial.println("]");
     
     if (cursorDirection) {
         if(counter < 2550) {
