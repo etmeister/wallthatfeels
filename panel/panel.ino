@@ -7,9 +7,9 @@ using namespace std;
 #define DATA_PIN 10
 
 CRGB leds[NUM_LEDS];
-int MAXBRIGHT = 255;
 int DELAY=50;
-int BRIGHT;
+int MAXBRIGHT = 255;
+int FADEBRIGHT;
 
 
 class WTFButton {
@@ -54,9 +54,17 @@ class WTFButton {
             }
         }
 
-        void updateLeds(CRGB *leds) {
+        void updateLeds(CRGB *leds, char *brightMode) {
           if (state) {
               for (unsigned int i = 0; i < buttonLights.size(); i++) {
+                  int BRIGHT;
+                  if (strcmp(brightMode, "SLOFADE") == 0) {
+                      BRIGHT = FADEBRIGHT;
+                  } else if (strcmp(brightMode, "TWINKLE") == 0) {
+                      BRIGHT = scale8(random8(), MAXBRIGHT);
+                  } else {
+                      BRIGHT = MAXBRIGHT;
+                  }
                   leds[buttonLights[i]] = CHSV(buttonColors[0], 255, BRIGHT);
               }
           }
@@ -116,10 +124,20 @@ void setup()
     pinMode(buttonPin, INPUT_PULLUP);
 }
 
-int counter=400;
+void setBright() {
+    unsigned long time = millis();
+    int delayed  = (int) time / 5 ;
+    FADEBRIGHT= delayed % MAXBRIGHT;
+    cursorDirection = delayed / MAXBRIGHT % 2;
+    if (cursorDirection) {
+        FADEBRIGHT = map(FADEBRIGHT,MAXBRIGHT,0,0,MAXBRIGHT);
+    }
+    if (FADEBRIGHT < 60) FADEBRIGHT = 60;
+}
+    
 void loop()
 {
-    BRIGHT=counter/10;
+    setBright();
     checkButton();
     Serial.print("[0");
 
@@ -129,27 +147,16 @@ void loop()
 
     
     for (int i = 0; i < 6; i++) {
+        char brightMode[7];
         buttonSets.buttons[i].checkState();
-        buttonSets.buttons[i].updateLeds(leds);
+        strcpy(brightMode, (i % 2 > 0) ? "SLOFADE" : "TWINKLE" );
+        buttonSets.buttons[i].updateLeds(leds, brightMode);
     }
 
     FastLED.show();
 
     Serial.println("]");
     
-    if (cursorDirection) {
-        if(counter < 2550) {
-            counter++;
-        } else {
-            cursorDirection = 0;
-        }
-    } else {
-       if(counter > 400) {
-           counter--;
-       } else {
-           cursorDirection = 1;
-       }
-    }
 }
 
 bool checkButton() {
