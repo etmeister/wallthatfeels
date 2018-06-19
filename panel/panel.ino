@@ -112,7 +112,7 @@ void setup()
 {
     pinMode(DATA_PIN, OUTPUT);
     FastLED.addLeds<WS2811, DATA_PIN, RGB>(leds, NUM_LEDS);
-    Serial.begin(9600);
+    Serial.begin(38400);
     pinMode(buttonPin, INPUT_PULLUP);
 }
 
