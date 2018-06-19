@@ -16,21 +16,40 @@ class WTFButton {
     private:
         vector<int> buttonColors;
         vector<int> buttonLights;
+        bool state;
 
     public:
         long senseThreshold;
+        long senseCurrent;
         int sensePin;
+        
         WTFButton(int pin, long threshold, int lights[], int colors[], int numberColors) {
             sensePin = pin;
             senseThreshold = threshold;
             setCHSVColors(colors, numberColors);
             for (int i = 0; i < 13; i++) {
                 if (lights[i] > 0) {
-                    buttonLights.push_back(lights[i]);
+                    buttonLights.push_back(lights[i]-1);
                 }
             }
         }
-        bool state;
+
+
+        void checkState() {
+            senseCurrent = touchRead(sensePin);
+            if (senseCurrent > senseThreshold ) {
+                state = true;
+                Serial.print("\t");
+                Serial.print(sensePin);
+                Serial.print(" ");
+                Serial.print(senseCurrent);
+                Serial.print(" ");
+            } else {
+                state = false;
+            }
+
+        }
+        
         void setCHSVColors(int colors[], int numberColors) {
             buttonColors.clear();
             for (int i = 0; i < numberColors; i++) {
@@ -39,9 +58,11 @@ class WTFButton {
         }
 
         void updateLeds(CRGB *leds) {
-            for (unsigned int i = 0; i < buttonLights.size(); i++) {
-                leds[buttonLights[i]] = CHSV(buttonColors[0], 255, BRIGHT);
-            }
+          if (state) {
+              for (unsigned int i = 0; i < buttonLights.size(); i++) {
+                  leds[buttonLights[i]] = CHSV(buttonColors[0], 255, BRIGHT);
+              }
+          }
         }
 };
 
@@ -64,18 +85,7 @@ class buttonSet {
 
 
 long touchThreshold[6] = { 1250, 1350, 1200, 1200, 1200, 1200 };
-int buttonState = 0;
-int lastButtonState = 0;
-int buttonCount = 0;
-int buttonPin = 12;
-int offset = 0;
-bool cursorDirection = 1;
 int touchPin[6] = { 16, 17, 22, 19, 18, 15 };
-
-
-
-int buttonStates[6] = { 0, 0, 0, 0, 0, 0 };
-
 int buttonLights[6][13] = {
   { 44, 43, 42, 41, 40, 39, 38, 37, 23, 22, 21 },
   { 20, 19, 18, 6, 5, 4, 3, 2, 1 },
@@ -84,8 +94,20 @@ int buttonLights[6][13] = {
   { 50, 49, 48, 47, 34, 33, 32, 31, 30, 29, 28, 27, 26},
   { 47, 46, 45, 37, 36, 35,34, 26, 24 }
 };
-
 int buttonColors[6][1] = { { HUE_RED }, { HUE_ORANGE }, { HUE_YELLOW }, { HUE_GREEN }, { HUE_BLUE }, {HUE_PURPLE} };
+int buttonStates[6] = { 0, 0, 0, 0, 0, 0 };
+
+int buttonState = 0;
+int lastButtonState = 0;
+int buttonCount = 0;
+int buttonPin = 12;
+int offset = 0;
+bool cursorDirection = 1;
+
+
+
+
+
 
 buttonSet buttonSets(6, touchPin, touchThreshold, buttonLights, buttonColors);
 
@@ -111,20 +133,15 @@ void loop()
     
     for (int i = 0; i < 6; i++) {
         WTFButton button = buttonSets.getButton(i);
-        long touchCurrent;
-        touchCurrent = touchRead(button.sensePin);
-        if (touchCurrent > button.senseThreshold ) {
-            button.updateLeds(leds);
-            Serial.print("\t");
-            Serial.print(i);
-            Serial.print(" ");
-            Serial.print(touchCurrent);
-            Serial.print(" ");
-        }
+        button.checkState();
+        button.updateLeds(leds);
     }
+
     FastLED.show();
     FastLED.delay(100);
+
     Serial.println(" ");
+    
     if (cursorDirection) {
         if(counter < 25) {
             counter++;
