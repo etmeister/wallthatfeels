@@ -68,9 +68,9 @@ class WTFButton {
 
 class buttonSet {
     private:
-        vector<WTFButton> buttons;
 
     public:
+        vector<WTFButton> buttons;
         buttonSet(int numberOfButtons, int pins[], long thresholds[], int buttonLights[][13], int buttonColors[][1]) {
               for (int i = 0; i < numberOfButtons; i++) {
                   WTFButton b = WTFButton(pins[i], thresholds[i], buttonLights[i], buttonColors[i], 1 );
@@ -119,10 +119,10 @@ void setup()
     pinMode(buttonPin, INPUT_PULLUP);
 }
 
-int counter=2;
+int counter=400;
 void loop()
 {
-    BRIGHT=counter*10;
+    BRIGHT=counter/10;
     checkButton();
     Serial.print("Touch sensor:");
 
@@ -132,24 +132,22 @@ void loop()
 
     
     for (int i = 0; i < 6; i++) {
-        WTFButton button = buttonSets.getButton(i);
-        button.checkState();
-        button.updateLeds(leds);
+        buttonSets.buttons[i].checkState();
+        buttonSets.buttons[i].updateLeds(leds);
     }
 
     FastLED.show();
-    FastLED.delay(100);
 
     Serial.println(" ");
     
     if (cursorDirection) {
-        if(counter < 25) {
+        if(counter < 2550) {
             counter++;
         } else {
             cursorDirection = 0;
         }
     } else {
-       if(counter > 4) {
+       if(counter > 400) {
            counter--;
        } else {
            cursorDirection = 1;
