@@ -97,7 +97,7 @@ class buttonSet {
 };
 
 
-long touchThreshold[6] = { 1600, 1330, 1250, 1250, 1900, 1140 };
+long touchThreshold[6] = { 1550, 1330, 1130, 1250, 1790, 1080 };
 int touchPin[6] = { 16, 17, 22, 19, 18, 15 };
 int buttonLights[6][13] = {
   { 44, 43, 42, 41, 40, 39, 38, 37, 23, 22, 21 },
