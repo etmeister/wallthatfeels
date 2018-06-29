@@ -1,5 +1,6 @@
 #include <FastLED.h>
 #include <Wire.h>
+#include <Chrono.h> 
 #include <vector>
 using namespace std;
 
@@ -7,7 +8,7 @@ using namespace std;
 #define DATA_PIN 10
 
 CRGB leds[NUM_LEDS];
-int MAXBRIGHT = 200;
+int MAXBRIGHT = 255;
 int FADEBRIGHT;
 int DELAYFACTOR = 5;
 
@@ -25,6 +26,7 @@ class WTFButton {
         long senseThreshold;
         long senseCurrent;
         int sensePin;
+        Chrono timer;
         
         WTFButton(int pin, long threshold, int lights[], int colors[], int numberColors) {
             sensePin = pin;
@@ -40,16 +42,18 @@ class WTFButton {
 
         void checkState() {
             senseCurrent = touchRead(sensePin);
-                Serial.print(",");
-                Serial.print(sensePin);
-                Serial.print("[");
-                Serial.print(senseCurrent);
-                Serial.print("]");
+            Serial.print(",[");
+            Serial.print(senseCurrent);
+            Serial.print(",");
             if (senseCurrent > senseThreshold ) {
+                Serial.print(sensePin);
                 state = true;
-            } else {
+                timer.restart();
+            } else if (timer.hasPassed(1000) ) {
+                Serial.print(0);
                 state = false;
             }
+            Serial.print("]");
 
         }
         
@@ -68,8 +72,10 @@ class WTFButton {
                       BRIGHT = FADEBRIGHT;
                   } else if (strcmp(brightMode, "TWINKLE") == 0) {
                       BRIGHT = scale8(random8(), MAXBRIGHT);
+                  } else if (strcmp(brightMode, "DELAYED") == 0) {
+                      BRIGHT = map(timer.elapsed(),0,1000,255,0);
                   } else {
-                      BRIGHT = MAXBRIGHT;
+                      BRIGHT=MAXBRIGHT;
                   }
                   int color = (delayed / 51);
                   color = (color + i) % 6;
@@ -97,7 +103,7 @@ class buttonSet {
 };
 
 
-long touchThreshold[6] = { 1550, 1330, 1130, 1250, 1790, 1080 };
+long touchThreshold[6] = { 1525, 1315, 1105, 1200, 1795, 1125 };
 int touchPin[6] = { 16, 17, 22, 19, 18, 15 };
 int buttonLights[6][13] = {
   { 44, 43, 42, 41, 40, 39, 38, 37, 23, 22, 21 },
@@ -148,7 +154,7 @@ void loop()
     delayed  = (int) time / DELAYFACTOR;
     setFadeBright();
     checkButton();
-    Serial.print("[0");
+    Serial.print("[[0]");
 
     for (int i = 0; i < NUM_LEDS; i++) {
          leds[i] = CHSV(0,255,0);
@@ -156,7 +162,7 @@ void loop()
 
     
     for (int i = 0; i < 6; i++) {
-        char brightMode[] = "SLOFADE";
+        char brightMode[] = "DELAYED";
         buttonSets.buttons[i].checkState();
         //strcpy(brightMode, (i % 2 > 0) ? "SLOFADE" : "TWINKLE" );
         buttonSets.buttons[i].setCHSVColors(buttonColors[((delayed / 1020) + i) % 3], 6);
@@ -166,6 +172,7 @@ void loop()
     FastLED.show();
 
     Serial.println("]");
+    Serial.flush();
     
 }
 
