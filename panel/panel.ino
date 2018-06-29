@@ -1,5 +1,5 @@
 #include <FastLED.h>
-#include <Wire.h>
+#include <Chrono.h> 
 #include <vector>
 using namespace std;
 
@@ -7,27 +7,32 @@ using namespace std;
 #define DATA_PIN 10
 
 CRGB leds[NUM_LEDS];
-int DELAY=50;
 int MAXBRIGHT = 255;
+int MINBRIGHT = 30;
 int FADEBRIGHT;
+int DELAYFACTOR = 5;
 
+unsigned long time;
+int delayed;
 
 class WTFButton {
     private:
         vector<int> buttonColors;
         vector<int> buttonLights;
         bool state;
+        int position = 0;
 
     public:
         long senseThreshold;
         long senseCurrent;
         int sensePin;
+        Chrono timer;
         
-        WTFButton(int pin, long threshold, int lights[], int colors[], int numberColors) {
+        WTFButton(int pin, long threshold, int lights[], int numberLights, int colors[], int numberColors) {
             sensePin = pin;
             senseThreshold = threshold;
             setCHSVColors(colors, numberColors);
-            for (int i = 0; i < 13; i++) {
+            for (int i = 0; i < numberLights; i++) {
                 if (lights[i] > 0) {
                     buttonLights.push_back(lights[i]-1);
                 }
@@ -38,11 +43,16 @@ class WTFButton {
         void checkState() {
             senseCurrent = touchRead(sensePin);
             if (senseCurrent > senseThreshold ) {
-                state = true;
                 Serial.print(",");
                 Serial.print(sensePin);
-            } else {
+                state = true;
+                timer.restart();
+            } else if (timer.hasPassed(1000) ) {
                 state = false;
+            } else {
+                Serial.print(",");
+                Serial.print(sensePin);
+
             }
 
         }
@@ -62,10 +72,14 @@ class WTFButton {
                       BRIGHT = FADEBRIGHT;
                   } else if (strcmp(brightMode, "TWINKLE") == 0) {
                       BRIGHT = scale8(random8(), MAXBRIGHT);
+                  } else if (strcmp(brightMode, "DELAYED") == 0) {
+                      BRIGHT = map(timer.elapsed(),0,1000,255,0);
                   } else {
-                      BRIGHT = MAXBRIGHT;
+                      BRIGHT=MAXBRIGHT;
                   }
-                  leds[buttonLights[i]] = CHSV(buttonColors[0], 255, BRIGHT);
+                  int color = (delayed / 51);
+                  color = (color + i) % 6;
+                  leds[buttonLights[i]] = CHSV(buttonColors[color], 255, BRIGHT);
               }
           }
         }
@@ -76,9 +90,9 @@ class buttonSet {
 
     public:
         vector<WTFButton> buttons;
-        buttonSet(int numberOfButtons, int pins[], long thresholds[], int buttonLights[][13], int buttonColors[][1]) {
+        buttonSet(int numberOfButtons, int pins[], long thresholds[], int buttonLights[][13], int buttonColors[]) {
               for (int i = 0; i < numberOfButtons; i++) {
-                  WTFButton b = WTFButton(pins[i], thresholds[i], buttonLights[i], buttonColors[i], 1 );
+                  WTFButton b = WTFButton(pins[i], thresholds[i], buttonLights[i], 13, buttonColors, 6 );
                   buttons.push_back(b);
               }
         }
@@ -89,7 +103,7 @@ class buttonSet {
 };
 
 
-long touchThreshold[6] = { 1250, 1350, 1200, 1200, 1200, 1200 };
+long touchThreshold[6] = { 1525, 1330, 1250, 1250, 1800, 1150 };
 int touchPin[6] = { 16, 17, 22, 19, 18, 15 };
 int buttonLights[6][13] = {
   { 44, 43, 42, 41, 40, 39, 38, 37, 23, 22, 21 },
@@ -99,13 +113,10 @@ int buttonLights[6][13] = {
   { 50, 49, 48, 47, 34, 33, 32, 31, 30, 29, 28, 27, 26},
   { 47, 46, 45, 37, 36, 35,34, 26, 24 }
 };
-int buttonColors[6][1] = { { HUE_RED }, { HUE_ORANGE }, { HUE_YELLOW }, { HUE_GREEN }, { HUE_BLUE }, {HUE_PURPLE} };
-int buttonStates[6] = { 0, 0, 0, 0, 0, 0 };
+int buttonColors[][6] = { { HUE_RED, HUE_ORANGE, HUE_YELLOW, HUE_GREEN, HUE_BLUE, HUE_PURPLE }, { HUE_AQUA, HUE_BLUE, HUE_PURPLE, HUE_AQUA, HUE_BLUE, HUE_PURPLE }, { HUE_RED, HUE_ORANGE, HUE_YELLOW, HUE_RED, HUE_ORANGE, HUE_YELLOW } };
 
-int buttonState = 0;
-int lastButtonState = 0;
-int buttonCount = 0;
-int buttonPin = 12;
+buttonSet buttonSets(6, touchPin, touchThreshold, buttonLights, buttonColors[0]);
+
 int offset = 0;
 bool cursorDirection = 1;
 
@@ -114,31 +125,29 @@ bool cursorDirection = 1;
 
 
 
-buttonSet buttonSets(6, touchPin, touchThreshold, buttonLights, buttonColors);
+
+void setFadeBright() {
+    FADEBRIGHT= delayed % MAXBRIGHT+1;
+    cursorDirection = delayed / MAXBRIGHT+1 % 2;
+    if (cursorDirection) {
+        FADEBRIGHT = map(FADEBRIGHT,MAXBRIGHT,0,0,MAXBRIGHT);
+    }
+    if (FADEBRIGHT < MINBRIGHT) FADEBRIGHT = MINBRIGHT;
+}
+
 
 void setup()
 {
     pinMode(DATA_PIN, OUTPUT);
     FastLED.addLeds<WS2811, DATA_PIN, RGB>(leds, NUM_LEDS);
     Serial.begin(38400);
-    pinMode(buttonPin, INPUT_PULLUP);
 }
 
-void setBright() {
-    unsigned long time = millis();
-    int delayed  = (int) time / 5 ;
-    FADEBRIGHT= delayed % MAXBRIGHT;
-    cursorDirection = delayed / MAXBRIGHT % 2;
-    if (cursorDirection) {
-        FADEBRIGHT = map(FADEBRIGHT,MAXBRIGHT,0,0,MAXBRIGHT);
-    }
-    if (FADEBRIGHT < 60) FADEBRIGHT = 60;
-}
-    
 void loop()
 {
-    setBright();
-    checkButton();
+    time = millis();
+    delayed  = (int) time / DELAYFACTOR;
+    setFadeBright();
     Serial.print("[0");
 
     for (int i = 0; i < NUM_LEDS; i++) {
@@ -147,31 +156,18 @@ void loop()
 
     
     for (int i = 0; i < 6; i++) {
-        char brightMode[7];
+        char brightMode[] = "DELAYED";
         buttonSets.buttons[i].checkState();
-        strcpy(brightMode, (i % 2 > 0) ? "SLOFADE" : "TWINKLE" );
+        //strcpy(brightMode, (i % 2 > 0) ? "SLOFADE" : "TWINKLE" );
+        buttonSets.buttons[i].setCHSVColors(buttonColors[((delayed / ((MAXBRIGHT-MINBRIGHT+1)*4) ) + i) % 3], 6);
         buttonSets.buttons[i].updateLeds(leds, brightMode);
     }
 
     FastLED.show();
 
     Serial.println("]");
+    Serial.flush();
     
-}
-
-bool checkButton() {
-    bool returnVal = false;
-    buttonState = digitalRead(buttonPin);
-    if (buttonState == HIGH && lastButtonState == LOW) {
-      if (buttonCount < 4) {
-          buttonCount++;
-      } else {
-          buttonCount = 0;
-      }
-      returnVal = true;
-    }
-    lastButtonState = buttonState;
-    return returnVal;
 }
 
 
