@@ -15,12 +15,20 @@ int DELAYFACTOR = 5;
 unsigned long time;
 int delayed;
 
+int physicalLayout[5][10] = {
+{49,48,47,46,45,44,43,42,41,40},
+{30,31,32,33,34,35,36,37,38,39},
+{29,28,27,26,25,24,23,22,21,20},
+{10,11,12,13,14,15,16,17,18,19},
+{9,8,7,6,5,4,3,2,1,0}
+};
+
 class WTFButton {
     private:
         vector<int> buttonColors;
         vector<int> buttonLights;
         bool state;
-        int position = 0;
+        int *sensePosition;
 
     public:
         long senseThreshold;
@@ -28,15 +36,11 @@ class WTFButton {
         int sensePin;
         Chrono timer;
         
-        WTFButton(int pin, long threshold, int lights[], int numberLights, int colors[], int numberColors) {
+        WTFButton(int pin, long threshold, int position[2],  int colors[], int numberColors) {
             sensePin = pin;
             senseThreshold = threshold;
+            sensePosition = position;
             setCHSVColors(colors, numberColors);
-            for (int i = 0; i < numberLights; i++) {
-                if (lights[i] > 0) {
-                    buttonLights.push_back(lights[i]-1);
-                }
-            }
         }
 
 
@@ -45,6 +49,11 @@ class WTFButton {
             if (senseCurrent > senseThreshold ) {
                 Serial.print(",");
                 Serial.print(sensePin);
+                Serial.print(",[");
+                Serial.println(sensePosition[0]);
+                Serial.print(",");
+                Serial.print(sensePosition[1]);
+                Serial.print("]");
                 state = true;
                 timer.restart();
             } else if (timer.hasPassed(1000) ) {
@@ -52,7 +61,6 @@ class WTFButton {
             } else {
                 Serial.print(",");
                 Serial.print(sensePin);
-
             }
 
         }
@@ -66,7 +74,10 @@ class WTFButton {
 
         void updateLeds(CRGB *leds, char *brightMode) {
           if (state) {
-              for (unsigned int i = 0; i < buttonLights.size(); i++) {
+              
+              for (int x = sensePosition[0]-2; x <= sensePosition[0]+2; x++) {
+                  for (int y = sensePosition[1]-1; y <= sensePosition[1]+1; y++) {
+                  if ( x < 0 || y < 0 || x > 9 || y > 4) { continue; }
                   int BRIGHT;
                   if (strcmp(brightMode, "SLOFADE") == 0) {
                       BRIGHT = FADEBRIGHT;
@@ -78,8 +89,9 @@ class WTFButton {
                       BRIGHT=MAXBRIGHT;
                   }
                   int color = (delayed / 51);
-                  color = (color + i) % 6;
-                  leds[buttonLights[i]] = CHSV(buttonColors[color], 255, BRIGHT);
+                  color = (color) % 6;
+                  leds[physicalLayout[y][x]] = CHSV(buttonColors[color], 255, BRIGHT);
+              }
               }
           }
         }
@@ -90,9 +102,9 @@ class buttonSet {
 
     public:
         vector<WTFButton> buttons;
-        buttonSet(int numberOfButtons, int pins[], long thresholds[], int buttonLights[][13], int buttonColors[]) {
+        buttonSet(int numberOfButtons, int pins[], long thresholds[], int buttonPositions[6][2], int buttonColors[]) {
               for (int i = 0; i < numberOfButtons; i++) {
-                  WTFButton b = WTFButton(pins[i], thresholds[i], buttonLights[i], 13, buttonColors, 6 );
+                  WTFButton b = WTFButton(pins[i], thresholds[i], buttonPositions[i], buttonColors, 6 );
                   buttons.push_back(b);
               }
         }
@@ -102,20 +114,23 @@ class buttonSet {
         }
 };
 
+int buttonPositions[6][2] = { {7, 1}, {7, 3}, {5, 3}, { 1,3 },  {2,1}, { 4,1} };
+
+
+struct pixel {
+  int red;
+  int green;
+  int blue;
+};
+
+pixel virtualScreen[10][5];
 
 long touchThreshold[6] = { 1525, 1330, 1250, 1250, 1800, 1150 };
 int touchPin[6] = { 16, 17, 22, 19, 18, 15 };
-int buttonLights[6][13] = {
-  { 44, 43, 42, 41, 40, 39, 38, 37, 23, 22, 21 },
-  { 20, 19, 18, 6, 5, 4, 3, 2, 1 },
-  { 25, 17, 16, 15, 8, 7, 6, 5 },
-  { 15, 14, 13, 12, 11, 10, 9, 8 },
-  { 50, 49, 48, 47, 34, 33, 32, 31, 30, 29, 28, 27, 26},
-  { 47, 46, 45, 37, 36, 35,34, 26, 24 }
-};
+
 int buttonColors[][6] = { { HUE_RED, HUE_ORANGE, HUE_YELLOW, HUE_GREEN, HUE_BLUE, HUE_PURPLE }, { HUE_AQUA, HUE_BLUE, HUE_PURPLE, HUE_AQUA, HUE_BLUE, HUE_PURPLE }, { HUE_RED, HUE_ORANGE, HUE_YELLOW, HUE_RED, HUE_ORANGE, HUE_YELLOW } };
 
-buttonSet buttonSets(6, touchPin, touchThreshold, buttonLights, buttonColors[0]);
+buttonSet buttonSets(6, touchPin, touchThreshold, buttonPositions, buttonColors[0]);
 
 int offset = 0;
 bool cursorDirection = 1;
