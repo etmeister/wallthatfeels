@@ -15,6 +15,49 @@ int DELAYFACTOR = 5;
 unsigned long time;
 int delayed;
 
+class Screen
+{
+public:
+  //Pixel[10][5] ThePixels;
+  void Update(CRGB *leds, double moveX, double moveY)
+  {
+      //each iteration, it calculates: new = old*old + c, where c is a constant and old starts at current pixel
+  double cRe, cIm;           //real and imaginary part of the constant c, determinate shape of the Julia Set
+  double newRe, newIm, oldRe, oldIm;   //real and imaginary parts of new and old
+  double zoom = 1; //you can change these to zoom and change position
+  CRGB color; //the RGB color value for the pixel
+  int maxIterations = 300; //after how much iterations the function should stop
+  int h =5;
+  int w =10;
+  int pixelIter = 0;
+    for(int y = 0; y < h; y++)
+      for(int x = 0; x < w; x++)
+      {
+      //calculate the initial real and imaginary part of z, based on the pixel location and zoom and position values
+      newRe = 1.5 * (x - w / 2) / (0.5 * zoom * w) + moveX;
+      newIm = (y - h / 2) / (0.5 * zoom * h) + moveY;
+      //i will represent the number of iterations
+      int i;
+      //start the iteration process
+      for(i = 0; i < maxIterations; i++)
+      {
+        //remember value of previous iteration
+        oldRe = newRe;
+        oldIm = newIm;
+        //the actual iteration, the real and imaginary part are calculated
+        newRe = oldRe * oldRe - oldIm * oldIm + cRe;
+        newIm = 2 * oldRe * oldIm + cIm;
+        //if the point is outside the circle with radius 2: stop
+
+        if((newRe * newRe + newIm * newIm) > 4) break;
+      }
+      Serial.println(i);
+      //use color model conversion to get rainbow palette, make brightness black if maxIterations reached
+      leds[pixelIter++].setHSV(i % 256, 255, 255);
+      }
+  }
+};
+
 class WTFButton {
     private:
         vector<int> buttonColors;
@@ -135,13 +178,16 @@ void setFadeBright() {
     if (FADEBRIGHT < MINBRIGHT) FADEBRIGHT = MINBRIGHT;
 }
 
+Screen potzer; 
 
 void setup()
 {
     pinMode(DATA_PIN, OUTPUT);
     FastLED.addLeds<WS2811, DATA_PIN, RGB>(leds, NUM_LEDS);
     Serial.begin(38400);
+        potzer.Update(leds,0,0);        
 }
+
 
 void loop()
 {
@@ -150,7 +196,7 @@ void loop()
     setFadeBright();
     Serial.print("[0");
 
-    for (int i = 0; i < NUM_LEDS; i++) {
+    /*for (int i = 0; i < NUM_LEDS; i++) {
          leds[i] = CHSV(0,255,0);
     }
 
@@ -161,9 +207,11 @@ void loop()
         //strcpy(brightMode, (i % 2 > 0) ? "SLOFADE" : "TWINKLE" );
         buttonSets.buttons[i].setCHSVColors(buttonColors[((delayed / ((MAXBRIGHT-MINBRIGHT+1)*4) ) + i) % 3], 6);
         buttonSets.buttons[i].updateLeds(leds, brightMode);
-    }
+    }*/
+        FastLED.show();
+        FastLED.delay(1000);
 
-    FastLED.show();
+
 
     Serial.println("]");
     Serial.flush();
