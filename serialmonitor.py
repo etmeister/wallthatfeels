@@ -13,6 +13,14 @@ files = {
 22:    "Violin 5.m4a"
 }
 
+#files = {
+#15:    "Bass.m4a",
+#16:    "Glockenspiel 2.m4a",
+#17:    "Log Drums.m4a",
+#18:    "Marimba.m4a",
+#19:    "Piano 3.m4a",
+#22:    "Tympani.m4a"
+#}
 
 #files = {
 #15:    "Celesta.m4a",
@@ -26,8 +34,8 @@ files = {
 procs = { 15: False, 16: False, 17: False, 18: False, 19: False, 22: False }
 
 def playSound(button):
-    proc = subprocess.Popen(["afplay","/Users/eimeister/Documents/installation/Music/"+ files[button] ])
-    endtime = time.time() + 2.00
+    proc = subprocess.Popen(["afplay","-v","1","./Installation/Music/"+ files[button] ])
+    endtime = time.time() + 3.01
     if procs[button] is False:
         procs[button] = [[  proc, endtime ]]
     else:
@@ -44,6 +52,7 @@ with serial.Serial('/dev/cu.usbmodem4012401', 38400, timeout=1) as ser:
             print("Error reading button status")
             continue
         loopStart = str(time.time()).split('.')[1][0]
+        print(loopStart)
         for key in states:
             if key in buttons:
                 if states[key] is not True:
