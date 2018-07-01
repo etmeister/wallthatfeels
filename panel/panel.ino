@@ -47,14 +47,16 @@ Palette blackoutPalette =  Palette(blackout, 1);
 class WTFButton {
     private:
         bool state;
-        int maestroSection;
         int *screenOffset;
+        int buttonActivated;
         Animation* animation;
 
     public:
+        int maestroSection;
         long senseThreshold;
         long senseCurrent;
         int sensePin;
+        unsigned long buttonPressed;
         Chrono buttonTimer;
         
         WTFButton(int pin, long threshold, int offset[2], int section) {
@@ -67,17 +69,26 @@ class WTFButton {
             animation->set_timer(200);
         }
 
-
+        bool operator< (const WTFButton &other) const {
+            return buttonPressed < other.buttonPressed;
+        }
+        
         void checkState() {
             senseCurrent = touchRead(sensePin);
             if (senseCurrent > senseThreshold ) {
+                if (state == false) {
+                     buttonPressed = time;
+                }
                 state = true;
                 animation->set_palette(&ColorPresets::Colorwheel_Palette);
                 buttonTimer.restart();
                 Serial.println(sensePin);
             } else if (buttonTimer.hasPassed(1000) ) {
-                animation->set_palette(&blackoutPalette);
-                state = false;
+                if (state) {
+                    state = false;
+                    buttonPressed = 0;
+                    animation->set_palette(&blackoutPalette);
+                }
             }
 
         }
@@ -101,9 +112,24 @@ class buttonSet {
         }
 
         void checkStates() {
-            for (int i = 0; i < buttons.size(); i++) {
-                buttons[i].checkState();
+            SortButtonsByPress();
+            for ( auto &i : buttons ) {
+                i.checkState();
             }    
+        }
+
+        void SortButtonsByPress() {
+            int i;
+            bool swapped = true;
+            while (swapped != false) {
+                swapped = false;
+                for (i = 0; i < buttons.size()-1; i++) {
+                    if (buttons[i].buttonPressed > buttons[i+1].buttonPressed) {
+                        iter_swap(&buttons[i], &buttons[i+1]);
+                        swapped = true;
+                    }
+                }
+            }
         }
 };
 
@@ -143,54 +169,18 @@ void loop()
 
     buttonSets.checkStates();
     if (maestro.update(time)) {
-      Serial.println("updating");
-        for (unsigned int s = 0; s < 6; s++) {
+        Serial.println("updating");
+        for ( auto &button : buttonSets.buttons ) {
             for (unsigned int x = 0; x < 4; x++) {
                for (unsigned int y = 0; y < 3; y++) {
-                   //Serial.println(screenOffsets[s][1]);
-                   //Serial.println(physicalLayout[y+screenOffsets[s][1]]);
-                   pixelColor = maestro.get_pixel_color(s, x, y);
-                   //Serial.println(physicalLayout[y+screenOffsets[s][1]][x+screenOffsets[s][0]]);
-                   leds[physicalLayout[y+screenOffsets[s][1]][x+screenOffsets[s][0]]] = CRGB(pixelColor.r, pixelColor.g, pixelColor.b);
+                   pixelColor = maestro.get_pixel_color(button.maestroSection, x, y);
+                   leds[physicalLayout[y+screenOffsets[button.maestroSection][1]][x+screenOffsets[button.maestroSection][0]]] = CRGB(pixelColor.r, pixelColor.g, pixelColor.b);
                }
             }
         }
     }
     
     FastLED.show();
-    /*for (int i = 0; i < NUM_LEDS; i++) {
-         leds[i] = CHSV(0,255,0);
-    }
-
-    
-    for (int i = 0; i < 6; i++) {
-        char brightMode[] = "DELAYED";
-        buttonSets.buttons[i].checkState();
-        //strcpy(brightMode, (i % 2 > 0) ? "SLOFADE" : "TWINKLE" );
-        buttonSets.buttons[i].setCHSVColors(buttonColors[((delayed / ((MAXBRIGHT-MINBRIGHT+1)*4) ) + i) % 3], 6);
-        buttonSets.buttons[i].updateLeds(leds, brightMode);
-    }*/
- /*       FastLED.delay(1000);
-        for(int x = 0; x < 10; x++) {
-          for (int y = 0; y < 5; y++) {
-             potzer.Update(leds, 1, x, y);        
-            FastLED.show();
-            FastLED.delay(1000);            
-          }
-        }
-        for (int z = 0; z < 100; z++) {
-             potzer.Update(leds, z, 5, 3);        
-            FastLED.show();
-            FastLED.delay(1000);                      
-        }
-        FastLED.show();
-        FastLED.delay(1000);
-
-
-*/
-    //Serial.println("]");
-    //Serial.flush();
-    
 }
 
 
