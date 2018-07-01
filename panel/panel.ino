@@ -2,8 +2,9 @@
 #include <core/maestro.h>
 #include <colorpresets.h>
  
-#include <vector>
+#include <deque>
 using namespace std;
+
 
 #include <FastLED.h>
 #include <Chrono.h>
@@ -12,21 +13,18 @@ using namespace std;
 #define DATA_PIN 10
 
 CRGB leds[NUM_LEDS];
-int MAXBRIGHT = 255;
-int MINBRIGHT = 30;
-int FADEBRIGHT;
-int DELAYFACTOR = 5;
-
+int MAXBRIGHT = 150;
+int SECTIONS_X = 4;
+int SECTIONS_Y = 3;
 unsigned long time;
-int delayed;
 
 Section sections[6] = {
-  Section(4, 3),
-  Section(4, 3),
-  Section(4, 3),
-  Section(4, 3),
-  Section(4, 3),
-  Section(4, 3),
+  Section(SECTIONS_X, SECTIONS_Y),
+  Section(SECTIONS_X, SECTIONS_Y),
+  Section(SECTIONS_X, SECTIONS_Y),
+  Section(SECTIONS_X, SECTIONS_Y),
+  Section(SECTIONS_X, SECTIONS_Y),
+  Section(SECTIONS_X, SECTIONS_Y),
 };
 
 Maestro maestro(sections, 6);
@@ -40,6 +38,12 @@ int physicalLayout[6][12] = {
 {29,28,27,26,26,25,24,23,23,22,21,20},
 {10,11,12,13,13,14,15,16,16,17,18,19},
 {9,8,7,6,6,5,4,3,3,2,1,0}};
+
+long touchThreshold[6] = { 1525, 1330, 1250, 1250, 1800, 1150 };
+int touchPin[6] = { 16, 17, 22, 19, 18, 15 };
+
+int offset = 0;
+bool cursorDirection = 1;
 
 Colors::RGB blackout[1] = { ColorPresets::Black };
 Palette blackoutPalette =  Palette(blackout, 1);
@@ -99,18 +103,14 @@ class buttonSet {
     private:
 
     public:
-        vector<WTFButton> buttons;
-        void updateButtonSet(int numberOfButtons, int pins[], long thresholds[], int screenOffets[6][2]) {
+        deque<WTFButton> buttons;
+        void updateButtonSet(int numberOfButtons, int pins[], long thresholds[], int screenOffets[][2]) {
               for (int i = 0; i < numberOfButtons; i++) {
-                  WTFButton b = WTFButton(pins[i], thresholds[i], screenOffsets[i], i );
+                  WTFButton b (pins[i], thresholds[i], screenOffsets[i], i );
                   buttons.push_back(b);
               }
         }
-
-        WTFButton getButton(int i) {
-            return buttons[i];
-        }
-
+        
         void checkStates() {
             for ( auto &i : buttons ) {
                 i.checkState();
@@ -133,29 +133,12 @@ class buttonSet {
         }
 };
 
-
-struct pixel {
-  int red;
-  int green;
-  int blue;
-};
-
 buttonSet buttonSets;
-
-pixel virtualScreen[10][5];
-
-long touchThreshold[6] = { 1525, 1330, 1250, 1250, 1800, 1150 };
-int touchPin[6] = { 16, 17, 22, 19, 18, 15 };
-
-
-int offset = 0;
-bool cursorDirection = 1;
-
 
 
 void setup()
 {   
-    maestro.set_brightness(150);
+    maestro.set_brightness(MAXBRIGHT);
     buttonSets.updateButtonSet(6, touchPin, touchThreshold, screenOffsets);
     pinMode(DATA_PIN, OUTPUT);
     FastLED.addLeds<WS2811, DATA_PIN, RGB>(leds, NUM_LEDS);
@@ -170,9 +153,9 @@ void loop()
     buttonSets.checkStates();
     if (maestro.update(time)) {
         Serial.println("updating");
-        for ( auto &button : buttonSets.buttons ) {
-            for (unsigned int x = 0; x < 4; x++) {
-               for (unsigned int y = 0; y < 3; y++) {
+        for ( WTFButton &button : buttonSets.buttons ) {
+            for (unsigned int x = 0; x < SECTIONS_X; x++) {
+               for (unsigned int y = 0; y < SECTIONS_Y; y++) {
                    pixelColor = maestro.get_pixel_color(button.maestroSection, x, y);
                    leds[physicalLayout[y+screenOffsets[button.maestroSection][1]][x+screenOffsets[button.maestroSection][0]]] = CRGB(pixelColor.r, pixelColor.g, pixelColor.b);
                }
