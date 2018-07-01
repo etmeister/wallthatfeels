@@ -20,20 +20,19 @@ int physicalLayout[5][10] = {
 {30,31,32,33,34,35,36,37,38,39},
 {29,28,27,26,25,24,23,22,21,20},
 {10,11,12,13,14,15,16,17,18,19},
-{9,8,7,6,5,4,3,2,1,0}
+{9,8,7,6,5,4,3,2,1,0}};
 
 class Screen
 {
 public:
   //Pixel[10][5] ThePixels;
-  void Update(CRGB *leds, double moveX, double moveY)
+  void Update(CRGB *leds, double zoom, double moveX, double moveY)
   {
       //each iteration, it calculates: new = old*old + c, where c is a constant and old starts at current pixel
   double cRe, cIm;           //real and imaginary part of the constant c, determinate shape of the Julia Set
   double newRe, newIm, oldRe, oldIm;   //real and imaginary parts of new and old
-  double zoom = 1; //you can change these to zoom and change position
   CRGB color; //the RGB color value for the pixel
-  int maxIterations = 300; //after how much iterations the function should stop
+  int maxIterations = 255; //after how much iterations the function should stop
   int h =5;
   int w =10;
   int pixelIter = 0;
@@ -60,7 +59,7 @@ public:
       }
       Serial.println(i);
       //use color model conversion to get rainbow palette, make brightness black if maxIterations reached
-      leds[pixelIter++].setHSV(i % 256, 255, 255);
+      leds[physicalLayout[y][x]].setHSV(i, 255, 255 * (i < maxIterations));
       }
   }
 };
@@ -199,7 +198,6 @@ void setup()
     pinMode(DATA_PIN, OUTPUT);
     FastLED.addLeds<WS2811, DATA_PIN, RGB>(leds, NUM_LEDS);
     Serial.begin(38400);
-        potzer.Update(leds,0,0);        
 }
 
 
@@ -222,6 +220,20 @@ void loop()
         buttonSets.buttons[i].setCHSVColors(buttonColors[((delayed / ((MAXBRIGHT-MINBRIGHT+1)*4) ) + i) % 3], 6);
         buttonSets.buttons[i].updateLeds(leds, brightMode);
     }*/
+        FastLED.show();
+        FastLED.delay(1000);
+        for(int x = 0; x < 10; x++) {
+          for (int y = 0; y < 5; y++) {
+             potzer.Update(leds, 1, x, y);        
+            FastLED.show();
+            FastLED.delay(1000);            
+          }
+        }
+        for (int z = 0; z < 100; z++) {
+             potzer.Update(leds, z, 5, 3);        
+            FastLED.show();
+            FastLED.delay(1000);                      
+        }
         FastLED.show();
         FastLED.delay(1000);
 
