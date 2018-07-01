@@ -198,6 +198,7 @@ void setup()
     pinMode(DATA_PIN, OUTPUT);
     FastLED.addLeds<WS2811, DATA_PIN, RGB>(leds, NUM_LEDS);
     Serial.begin(38400);
+        potzer.Update(leds,0,0);        
 }
 
 
@@ -220,8 +221,6 @@ void loop()
         buttonSets.buttons[i].setCHSVColors(buttonColors[((delayed / ((MAXBRIGHT-MINBRIGHT+1)*4) ) + i) % 3], 6);
         buttonSets.buttons[i].updateLeds(leds, brightMode);
     }*/
-        FastLED.show();
-        FastLED.delay(1000);
         for(int x = 0; x < 10; x++) {
           for (int y = 0; y < 5; y++) {
              potzer.Update(leds, 1, x, y);        
