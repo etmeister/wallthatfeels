@@ -112,10 +112,10 @@ class buttonSet {
         }
 
         void checkStates() {
-            SortButtonsByPress();
             for ( auto &i : buttons ) {
                 i.checkState();
             }    
+            SortButtonsByPress();
         }
 
         void SortButtonsByPress() {
