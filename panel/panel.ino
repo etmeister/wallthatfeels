@@ -13,9 +13,10 @@ using namespace std;
 #define DATA_PIN 10
 
 CRGB leds[NUM_LEDS];
-int MAXBRIGHT = 150;
+int MAXBRIGHT = 200;
 int SECTIONS_X = 4;
 int SECTIONS_Y = 3;
+int DELAY=200;
 unsigned long time;
 
 Section sections[6] = {
@@ -50,12 +51,12 @@ Palette blackoutPalette =  Palette(blackout, 1);
 
 class WTFButton {
     private:
-        bool state;
         int *screenOffset;
         int buttonActivated;
         Animation* animation;
 
     public:
+        bool state;
         int maestroSection;
         long senseThreshold;
         long senseCurrent;
@@ -63,14 +64,14 @@ class WTFButton {
         unsigned long buttonPressed;
         Chrono buttonTimer;
         
-        WTFButton(int pin, long threshold, int offset[2], int section) {
+        WTFButton(int pin, long threshold, int offset[2], AnimationType buttonAnimation, int section) {
             sensePin = pin;
             maestroSection = section;
             senseThreshold = threshold;
             screenOffset = offset;
-            animation = maestro.get_section(maestroSection)->set_animation(AnimationType::Wave);
+            animation = maestro.get_section(maestroSection)->set_animation(buttonAnimation);
             animation->set_palette(&blackoutPalette);
-            animation->set_timer(200);
+            animation->set_timer(DELAY);
         }
 
         bool operator< (const WTFButton &other) const {
@@ -86,11 +87,11 @@ class WTFButton {
                 state = true;
                 animation->set_palette(&ColorPresets::Colorwheel_Palette);
                 buttonTimer.restart();
-                Serial.println(sensePin);
             } else if (buttonTimer.hasPassed(1000) ) {
                 if (state) {
                     state = false;
                     buttonPressed = 0;
+//                    animation->set_timer(500);
                     animation->set_palette(&blackoutPalette);
                 }
             }
@@ -104,9 +105,9 @@ class buttonSet {
 
     public:
         deque<WTFButton> buttons;
-        void updateButtonSet(int numberOfButtons, int pins[], long thresholds[], int screenOffets[][2]) {
+        void updateButtonSet(int numberOfButtons, int pins[], long thresholds[], int screenOffets[][2], AnimationType animations[]) {
               for (int i = 0; i < numberOfButtons; i++) {
-                  WTFButton b (pins[i], thresholds[i], screenOffsets[i], i );
+                  WTFButton b (pins[i], thresholds[i], screenOffsets[i], animations[i], i );
                   buttons.push_back(b);
               }
         }
@@ -117,14 +118,14 @@ class buttonSet {
             }    
             SortButtonsByPress();
         }
-
+    
         void SortButtonsByPress() {
             int i;
             bool swapped = true;
             while (swapped != false) {
                 swapped = false;
                 for (i = 0; i < buttons.size()-1; i++) {
-                    if (buttons[i].buttonPressed > buttons[i+1].buttonPressed) {
+                    if (buttons[i+1] < buttons[i]) {
                         iter_swap(&buttons[i], &buttons[i+1]);
                         swapped = true;
                     }
@@ -135,11 +136,13 @@ class buttonSet {
 
 buttonSet buttonSets;
 
+AnimationType animations[6] = { AnimationType::Fire, AnimationType::Plasma, AnimationType::Radial, AnimationType::Fire, AnimationType::Plasma, AnimationType::Radial };
 
 void setup()
 {   
     maestro.set_brightness(MAXBRIGHT);
-    buttonSets.updateButtonSet(6, touchPin, touchThreshold, screenOffsets);
+    //maestro.set_timer(MAESTRODELAY);
+    buttonSets.updateButtonSet(6, touchPin, touchThreshold, screenOffsets, animations);
     pinMode(DATA_PIN, OUTPUT);
     FastLED.addLeds<WS2811, DATA_PIN, RGB>(leds, NUM_LEDS);
     Serial.begin(38400);
@@ -152,12 +155,16 @@ void loop()
 
     buttonSets.checkStates();
     if (maestro.update(time)) {
-        Serial.println("updating");
         for ( WTFButton &button : buttonSets.buttons ) {
             for (unsigned int x = 0; x < SECTIONS_X; x++) {
                for (unsigned int y = 0; y < SECTIONS_Y; y++) {
                    pixelColor = maestro.get_pixel_color(button.maestroSection, x, y);
-                   leds[physicalLayout[y+screenOffsets[button.maestroSection][1]][x+screenOffsets[button.maestroSection][0]]] = CRGB(pixelColor.r, pixelColor.g, pixelColor.b);
+                   int ypos = screenOffsets[button.maestroSection][1] + y;
+                   int xpos = screenOffsets[button.maestroSection][0] + x;
+                   leds[physicalLayout[ypos][xpos]] = CRGB(pixelColor.r, pixelColor.g, pixelColor.b);
+/*                   if (button.state == false) {
+                       leds[physicalLayout[ypos][xpos]].n( 0);
+                   }*/
                }
             }
         }
