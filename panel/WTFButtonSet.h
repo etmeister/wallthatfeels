@@ -17,9 +17,10 @@ class WTFButtonSet {
       Section(section_x, section_y),
       Section(section_x, section_y),
     };
-    Maestro maestro = Maestro(sections, numButtons);
     WTFButton buttons[numButtons];
-    WTFButtonSet() { }
+    Maestro maestro;
+    WTFButtonSet(): maestro(sections,numButtons) { }
+ 
     void updateButtonSet(int pins[], int sensitivity, int sectionOffsets[][2], AnimationType animations[], int delayed, int brightness, CRGB *leds);
 
     void calibrateButtons(CRGB leds[]);
