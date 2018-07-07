@@ -3,6 +3,7 @@
 #include <colorpresets.h>
  
 #include <deque>
+#include <algorithm>
 using namespace std;
 
 
@@ -13,7 +14,7 @@ using namespace std;
 #define DATA_PIN 10
 
 CRGB leds[NUM_LEDS];
-int MAXBRIGHT = 200;
+int MAXBRIGHT = 100;
 int SECTIONS_X = 4;
 int SECTIONS_Y = 3;
 int DELAY=200;
@@ -49,6 +50,8 @@ bool cursorDirection = 1;
 Colors::RGB blackout[1] = { ColorPresets::Black };
 Palette blackoutPalette =  Palette(blackout, 1);
 
+float derp(float v0, float v1, float t) { return (1 - t) * v0 + t * v1; };
+
 class WTFButton {
     private:
         int *screenOffset;
@@ -74,16 +77,24 @@ class WTFButton {
             animation->set_timer(DELAY);
         }
 
+        bool operator<= (const WTFButton &other) const {
+            return buttonPressed <= other.buttonPressed;
+        }
+
         bool operator< (const WTFButton &other) const {
             return buttonPressed < other.buttonPressed;
         }
-        
         void checkState() {
             senseCurrent = touchRead(sensePin);
             if (senseCurrent > senseThreshold ) {
                 if (state == false) {
                      buttonPressed = time;
+                     
                 }
+                Serial.print(sensePin);
+                Serial.print(": ");
+                Serial.print(senseThreshold);
+                Serial.print(",");
                 state = true;
                 animation->set_palette(&ColorPresets::Colorwheel_Palette);
                 buttonTimer.restart();
@@ -104,39 +115,76 @@ class buttonSet {
     private:
 
     public:
-        deque<WTFButton> buttons;
+        deque<WTFButton*> buttons;
         void updateButtonSet(int numberOfButtons, int pins[], long thresholds[], int screenOffets[][2], AnimationType animations[]) {
               for (int i = 0; i < numberOfButtons; i++) {
                   WTFButton b (pins[i], thresholds[i], screenOffsets[i], animations[i], i );
-                  buttons.push_back(b);
+                  buttons.push_back(new WTFButton(pins[i], thresholds[i], screenOffsets[i], animations[i], i ));
               }
         }
         
         void checkStates() {
-            for ( auto &i : buttons ) {
-                i.checkState();
+            for ( WTFButton *i : buttons ) {
+                i->checkState();
             }    
-            SortButtonsByPress();
+            bubbleSortButtonsByPress();
         }
+        
+        unsigned int partition(unsigned int lo, unsigned int hi) {
+        int mid = ( lo + hi ) / 2;
+        if (buttons[mid] < buttons[lo]) {
+            swap(buttons[lo],buttons[mid]);
+        }
+        if (buttons[hi] < buttons[lo]) {
+            swap(buttons[lo], buttons[hi]);
+        }
+        if (buttons[mid] < buttons[hi]) {
+            swap(buttons[mid],buttons[hi]);
+        }
+
+            unsigned int i = lo;
+            for (unsigned int j = lo; j < hi; j++) {
+                if (*buttons[j] <= *buttons[hi]) {
+                       swap(buttons[i],buttons[j]);
+                   i++;
+                }
+            }
+            swap(buttons[i], buttons[hi]);
+            return i;
+        }
+       
+        void quickSortButtonsByPress(unsigned int lo, unsigned int hi) {
+            Serial.println("Sorting buttons...");
+            if (lo < hi) {
+                unsigned int part = partition(lo, hi);
+                quickSortButtonsByPress(lo, part-1);
+                quickSortButtonsByPress(part+1, hi);
+            }
+            Serial.println("Done sorting buttons...");
+        }           
+
+
     
-        void SortButtonsByPress() {
-            int i;
+        void bubbleSortButtonsByPress() {
+            Serial.println("Sorting buttons...");
+            unsigned int i;
             bool swapped = true;
             while (swapped != false) {
                 swapped = false;
                 for (i = 0; i < buttons.size()-1; i++) {
-                    if (buttons[i+1] < buttons[i]) {
-                        iter_swap(&buttons[i], &buttons[i+1]);
+                    if (*buttons[i+1] < *buttons[i]) {
+                        swap(buttons[i], buttons[i+1]);
                         swapped = true;
                     }
                 }
             }
+            Serial.println("Done sorting buttons...");
         }
 };
 
 buttonSet buttonSets;
 
-AnimationType animations[6] = { AnimationType::Fire, AnimationType::Plasma, AnimationType::Radial, AnimationType::Fire, AnimationType::Plasma, AnimationType::Radial };
+AnimationType animations[6] = { AnimationType::Wave, AnimationType::Fire, AnimationType::Plasma, AnimationType::Wave, AnimationType::Cycle, AnimationType::Blink };
 
 void setup()
 {   
@@ -151,16 +199,17 @@ void setup()
 void loop()
 {
     time = millis();
+    
     Colors::RGB pixelColor; 
 
     buttonSets.checkStates();
     if (maestro.update(time)) {
-        for ( WTFButton &button : buttonSets.buttons ) {
-            for (unsigned int x = 0; x < SECTIONS_X; x++) {
-               for (unsigned int y = 0; y < SECTIONS_Y; y++) {
-                   pixelColor = maestro.get_pixel_color(button.maestroSection, x, y);
-                   int ypos = screenOffsets[button.maestroSection][1] + y;
-                   int xpos = screenOffsets[button.maestroSection][0] + x;
+        for ( WTFButton *button : buttonSets.buttons ) {
+            for (int x = 0; x < SECTIONS_X; x++) {
+               for (int y = 0; y < SECTIONS_Y; y++) {
+                   pixelColor = maestro.get_pixel_color(button->maestroSection, x, y);
+                   int ypos = screenOffsets[button->maestroSection][1] + y;
+                   int xpos = screenOffsets[button->maestroSection][0] + x;
                    leds[physicalLayout[ypos][xpos]] = CRGB(pixelColor.r, pixelColor.g, pixelColor.b);
 /*                   if (button.state == false) {
                        leds[physicalLayout[ypos][xpos]].n( 0);
@@ -169,7 +218,7 @@ void loop()
             }
         }
     }
-    
+    Serial.println("");
     FastLED.show();
 }
 
