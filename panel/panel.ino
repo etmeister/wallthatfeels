@@ -67,7 +67,9 @@ class WTFButton {
         unsigned long buttonPressed;
         Chrono buttonTimer;
         
-        WTFButton(int pin, long threshold, int offset[2], AnimationType buttonAnimation, int section) {
+        WTFButton(){
+        }
+		void Setup(int pin, long threshold, int offset[2], AnimationType buttonAnimation, int section) {
             sensePin = pin;
             maestroSection = section;
             senseThreshold = threshold;
@@ -75,8 +77,7 @@ class WTFButton {
             animation = maestro.get_section(maestroSection)->set_animation(buttonAnimation);
             animation->set_palette(&blackoutPalette);
             animation->set_timer(DELAY);
-        }
-
+		}
         bool operator<= (const WTFButton &other) const {
             return buttonPressed <= other.buttonPressed;
         }
@@ -110,22 +111,24 @@ class WTFButton {
         }
         
 };
-
+template <int numButtons>
 class buttonSet {
     private:
 
     public:
-        deque<WTFButton*> buttons;
-        void updateButtonSet(int numberOfButtons, int pins[], long thresholds[], int screenOffets[][2], AnimationType animations[]) {
-              for (int i = 0; i < numberOfButtons; i++) {
-                  WTFButton b (pins[i], thresholds[i], screenOffsets[i], animations[i], i );
-                  buttons.push_back(new WTFButton(pins[i], thresholds[i], screenOffsets[i], animations[i], i ));
+		WTFButton buttons[numButtons];
+        //deque<WTFButton*> buttons;
+        void updateButtonSet(int pins[], long thresholds[], int screenOffets[][2], AnimationType animations[]) {
+              for (int i = 0; i < numButtons; i++) {
+				  buttons[i].Setup(pins[i], thresholds[i], screenOffsets[i], animations[i], i);
+                  //WTFButton b ( );
+                  //buttons.push_back(new WTFButton(pins[i], thresholds[i], screenOffsets[i], animations[i], i ));
               }
         }
         
         void checkStates() {
-            for ( WTFButton *i : buttons ) {
-                i->checkState();
+            for ( WTFButton i : buttons ) {
+                i.checkState();
             }    
             bubbleSortButtonsByPress();
         }
@@ -144,7 +147,7 @@ class buttonSet {
 
             unsigned int i = lo;
             for (unsigned int j = lo; j < hi; j++) {
-                if (*buttons[j] <= *buttons[hi]) {
+                if (buttons[j] <= buttons[hi]) {
                        swap(buttons[i],buttons[j]);
                    i++;
                 }
@@ -172,7 +175,7 @@ class buttonSet {
             while (swapped != false) {
                 swapped = false;
                 for (i = 0; i < buttons.size()-1; i++) {
-                    if (*buttons[i+1] < *buttons[i]) {
+                    if (buttons[i+1] < buttons[i]) {
                         swap(buttons[i], buttons[i+1]);
                         swapped = true;
                     }
@@ -182,7 +185,7 @@ class buttonSet {
         }
 };
 
-buttonSet buttonSets;
+buttonSet<6> buttonSets;
 
 AnimationType animations[6] = { AnimationType::Wave, AnimationType::Fire, AnimationType::Plasma, AnimationType::Wave, AnimationType::Cycle, AnimationType::Blink };
 
@@ -190,7 +193,7 @@ void setup()
 {   
     maestro.set_brightness(MAXBRIGHT);
     //maestro.set_timer(MAESTRODELAY);
-    buttonSets.updateButtonSet(6, touchPin, touchThreshold, screenOffsets, animations);
+    buttonSets.updateButtonSet( touchPin, touchThreshold, screenOffsets, animations);
     pinMode(DATA_PIN, OUTPUT);
     FastLED.addLeds<WS2811, DATA_PIN, RGB>(leds, NUM_LEDS);
     Serial.begin(38400);
@@ -204,7 +207,7 @@ void loop()
 
     buttonSets.checkStates();
     if (maestro.update(time)) {
-        for ( WTFButton *button : buttonSets.buttons ) {
+        for ( WTFButton button : buttonSets.buttons ) {
             for (int x = 0; x < SECTIONS_X; x++) {
                for (int y = 0; y < SECTIONS_Y; y++) {
                    pixelColor = maestro.get_pixel_color(button->maestroSection, x, y);
