@@ -1,18 +1,15 @@
 #ifndef WTFBUTTON_DEFINED
 #define WTFBUTTON_DEFINED
-
 #include <PixelMaestro.h>
 #include <core/maestro.h>
-#include <colorpresets.h>
-#include <algorithm>
-#include <FastLED.h>
 #include <Chrono.h>
+#include <FastLED.h>
 
 extern int physicalLayout[6][12];
 
 class WTFButton {
     private:
-        int *screenOffset;
+        int *sectionOffset;
         int buttonActivated;
         Animation* animation;
 
@@ -32,14 +29,16 @@ class WTFButton {
         }
 
     void Setup(int pin, int sensitivity, int offset[2], AnimationType buttonAnimation, int delayed, Section* section, int sectionId, Maestro* m);
-    bool operator<= (const WTFButton &other) const {
-    }
 
     bool operator< (const WTFButton &other) const {
+      return buttonPressed <= other.buttonPressed;
     }
+    
+    
+    
 
         void calibrate(CRGB *leds);
-        
+        void drawColor(CRGB *leds, int r, int g, int b);
         void checkState(unsigned long time);
         void blackLights(CRGB *leds);
 

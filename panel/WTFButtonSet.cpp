@@ -2,11 +2,11 @@
 #include <algorithm>
 
 template <int numButtons>
-void WTFButtonSet<numButtons>::updateButtonSet(int pins[], int sensitivity, int screenOffsets[][2], AnimationType animations[], int delayed, Section sections[], Maestro* m) {
+void WTFButtonSet<numButtons>::updateButtonSet(int pins[], int sensitivity, int sectionOffsets[][2], AnimationType animations[], int delayed, Section sections[], Maestro* m) {
       for (int i = 0; i < numButtons; i++) {
-          buttons[i].Setup(pins[i], sensitivity, screenOffsets[i], animations[i], delayed, &sections[i], i, m);
+          buttons[i].Setup(pins[i], sensitivity, sectionOffsets[i], animations[i], delayed, &sections[i], i, m);
           //WTFButton b ( );
-          //buttons.push_back(new WTFButton(pins[i], thresholds[i], screenOffsets[i], animations[i], i ));
+          //buttons.push_back(new WTFButton(pins[i], thresholds[i], sectionOffsets[i], animations[i], i ));
       }
 }
 

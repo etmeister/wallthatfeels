@@ -10,7 +10,7 @@ class WTFButtonSet {
     public:
     WTFButton buttons[numButtons];
 
-    void updateButtonSet(int pins[], int sensitivity, int screenOffsets[][2], AnimationType animations[], int delayed, Section sections[], Maestro* m);
+    void updateButtonSet(int pins[], int sensitivity, int sectionOffsets[][2], AnimationType animations[], int delayed, Section sections[], Maestro* m);
 
     void calibrateButtons(CRGB leds[]);
     
