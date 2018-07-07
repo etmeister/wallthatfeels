@@ -14,25 +14,18 @@ using namespace std;
 #define NUM_LEDS 50
 #define DATA_PIN 10
 
+#define NUM_LEDS 50
+#define NUM_BUTTONS 6
+#define SECTION_X 4
+#define SECTION_Y 3
+
 // array of led colors used by FastLED.show() to drive LED strips
 CRGB leds[NUM_LEDS];
 
-// size of the grid of lights activated by a button
-int SECTIONS_X = 4;
-int SECTIONS_Y = 3;
+// size of the section of lights activated by a button. Used in buttonset to create a section for each button.
 
-// (x,y) position of top left ofbutton in the overall layout, used to map button sections to physical layout
-int sectionOffsets[6][2] = { {8, 0}, {8, 3}, {4, 3}, { 0,3 },  {0,0}, { 4,0} };
-
-// The sections used by pixelMaestro.  Each one has a unique animation, and is tied to a specific button.
-Section sections[6] = {
-  Section(SECTIONS_X, SECTIONS_Y),
-  Section(SECTIONS_X, SECTIONS_Y),
-  Section(SECTIONS_X, SECTIONS_Y),
-  Section(SECTIONS_X, SECTIONS_Y),
-  Section(SECTIONS_X, SECTIONS_Y),
-  Section(SECTIONS_X, SECTIONS_Y),
-};
+// (x,y) position of top left of button in the overall layout, used to map button sections to physical layout
+int sectionOffsets[NUM_BUTTONS][2] = { {8, 0}, {8, 3}, {4, 3}, { 0,3 },  {0,0}, { 4,0} };
 
 /* 
  This represents the overall mapping of sections to LEDs.  Each entry is a position in leds[] for a physical LED.
@@ -42,7 +35,7 @@ Section sections[6] = {
  Specifically, 6 4x3 sections are laid out in a 3x2 grid, with one overlapping row of pixels on any shared edge.
  
 */
-int physicalLayout[6][12] = {
+int physicalLayout[NUM_BUTTONS][12] = {
 {49,48,47,46,46,45,44,43,43,42,41,40},
 {30,31,32,33,33,34,35,36,36,37,38,39},
 {29,28,27,26,26,25,24,23,23,22,21,20},
@@ -51,40 +44,38 @@ int physicalLayout[6][12] = {
 {9,8,7,6,6,5,4,3,3,2,1,0}};
 
 // Pins on the microcontroller that the capacitive sensors are connected to
-int touchPin[6] = { 16, 17, 22, 19, 18, 15 };
+int touchPin[NUM_BUTTONS] = { 16, 17, 22, 19, 18, 15 };
 
 // Amount of variance in capacity required to activate a button
 int SENSITIVITY=50;
 
 // List of animations to apply to sections, one-to-one mapping.
-AnimationType animations[6] = { AnimationType::Plasma, AnimationType::Plasma, AnimationType::Plasma, AnimationType::Plasma, AnimationType::Plasma, AnimationType::Plasma };
+AnimationType animations[NUM_BUTTONS] = { AnimationType::Plasma, AnimationType::Plasma, AnimationType::Plasma, AnimationType::Plasma, AnimationType::Plasma, AnimationType::Plasma };
 
 // variables controlling animation 
 const int MAXBRIGHT = 100;
 int DELAY=200;
 
 // Create the set of buttons and the maestro animator object
-WTFButtonSet<6> buttonSet;
-Maestro maestro(sections, 6);
+WTFButtonSet<NUM_BUTTONS,SECTION_X,SECTION_Y> buttonSet;
 
 void setup()
 {   
     // Configure global brightness, map the buttons, enable the LEDs, and calibrate the buttons.
-    maestro.set_brightness(MAXBRIGHT);
-    buttonSet.updateButtonSet( touchPin, SENSITIVITY, sectionOffsets , animations, DELAY, sections, &maestro);
-    pinMode(DATA_PIN, OUTPUT);
     FastLED.addLeds<WS2811, DATA_PIN, RGB>(leds, NUM_LEDS);
+    pinMode(DATA_PIN, OUTPUT);
+    buttonSet.updateButtonSet( touchPin, SENSITIVITY, sectionOffsets , animations, DELAY, MAXBRIGHT, leds);
     Serial.begin(38400);
-    buttonSet.calibrateButtons(leds);
 }
 
 void loop()
 {
     unsigned long time = millis();
+    Serial.println(time);
     //  Poll the current capacticance values and determines if buttons are activated
     buttonSet.checkStates(time);
     // maestro.update returns true if the animations require redrawing of pixels for the current time marker.
-    if (maestro.update(time)) {
+    if (buttonSet.maestro.update(time)) {
         buttonSet.updateLights(leds);
     }
     FastLED.show();

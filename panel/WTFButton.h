@@ -28,22 +28,18 @@ class WTFButton {
         WTFButton(){
         }
 
-    void Setup(int pin, int sensitivity, int offset[2], AnimationType buttonAnimation, int delayed, Section* section, int sectionId, Maestro* m);
+        void Setup(int pin, int sensitivity, int offset[2], AnimationType buttonAnimation, int delayed, Section* section, int sectionId, Maestro* m);
 
-    bool operator< (const WTFButton &other) const {
-      return buttonPressed <= other.buttonPressed;
-    }
-    
-    
-    
+        bool operator< (const WTFButton &other) const {
+          return buttonPressed <= other.buttonPressed;
+        }
 
         void calibrate(CRGB *leds);
-        void drawColor(CRGB *leds, int r, int g, int b);
         void checkState(unsigned long time);
+        
+        void drawColor(CRGB *leds, int r, int g, int b);
         void blackLights(CRGB *leds);
-
-        void blueLights(CRGB *leds);
-                
+        void blueLights(CRGB *leds);                
         void updateLights(CRGB *leds);
         
 };

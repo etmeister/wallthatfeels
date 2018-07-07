@@ -3,14 +3,24 @@
 #include "WTFButton.h"
 
 
-template <int numButtons>
+template <int numButtons, int section_x, int section_y>
 class WTFButtonSet {
     private:
 
     public:
+    // The sections used by pixelMaestro.  Each one has a unique animation, and is tied to a specific button.
+    Section sections[numButtons] = {
+      Section(section_x, section_y),
+      Section(section_x, section_y),
+      Section(section_x, section_y),
+      Section(section_x, section_y),
+      Section(section_x, section_y),
+      Section(section_x, section_y),
+    };
     WTFButton buttons[numButtons];
-
-    void updateButtonSet(int pins[], int sensitivity, int sectionOffsets[][2], AnimationType animations[], int delayed, Section sections[], Maestro* m);
+    Maestro maestro = Maestro(1,1);
+    WTFButtonSet() { }
+    void updateButtonSet(int pins[], int sensitivity, int sectionOffsets[][2], AnimationType animations[], int delayed, int brightness, CRGB *leds);
 
     void calibrateButtons(CRGB leds[]);
     
