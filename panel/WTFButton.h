@@ -5,7 +5,7 @@
 #include <Chrono.h>
 #include <FastLED.h>
 
-extern int physicalLayout[6][12];
+extern int physicalLayout[15][12];
 
 class WTFButton {
     private:
@@ -21,6 +21,8 @@ class WTFButton {
         long senseThreshold;
         long senseCurrent;
         int sensePin;
+        int senseController;
+
         int senseItivity;
         unsigned long buttonPressed;
         Chrono buttonTimer;
@@ -28,14 +30,19 @@ class WTFButton {
         WTFButton(){
         }
 
-        void Setup(int pin, int sensitivity, int offset[2], AnimationType buttonAnimation, int delayed, Section* section, int sectionId, Maestro* m);
+        void Setup(int pin[2], int sensitivity, int offset[2], AnimationType buttonAnimation, int delayed, Section* section, int sectionId, Maestro* m);
 
         bool operator< (const WTFButton &other) const {
-          return buttonPressed <= other.buttonPressed;
+          return buttonPressed < other.buttonPressed;
         }
 
         void calibrate(CRGB *leds);
+        void calibrateTeensy(CRGB *leds);
+        void calibrateMPR121(CRGB *leds);
+
         void checkState(unsigned long time);
+        void checkState(unsigned long time, uint16_t *mprStates);
+        void processState(unsigned long time, bool newState);
         
         void drawColor(CRGB *leds, int r, int g, int b);
         void blackLights(CRGB *leds);

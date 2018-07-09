@@ -2,11 +2,12 @@
 #include <colorpresets.h>
 #include <algorithm>
 
-float derpout(float v0, float t) { return max(0.0,(1 - t) * v0); };
+int derpout(float v0, float t) { return (int)max(0.0,(1 - t) * v0); };
 CRGB BLACK (0,0,0);
 
-void WTFButton::Setup(int pin, int sensitivity, int offset[2], AnimationType buttonAnimation, int delayed, Section* section, int sectionId, Maestro* m) {
-        sensePin = pin;
+void WTFButton::Setup(int pin[2], int sensitivity, int offset[2], AnimationType buttonAnimation, int delayed, Section* section, int sectionId, Maestro* m) {
+        sensePin = pin[0];
+        senseController = pin[1];
         maestroSection = section;
         maestroSectionId = sectionId;
         maestro = m;
@@ -17,11 +18,24 @@ void WTFButton::Setup(int pin, int sensitivity, int offset[2], AnimationType but
         animation->set_timer(delayed);
 }
 
-
 void WTFButton::calibrate(CRGB *leds) {
+    if (senseController == 1) {
+        calibrateMPR121(leds);
+    } else {
+        calibrateTeensy(leds);
+    }
+}
+
+void WTFButton::calibrateMPR121(CRGB *leds) {
+    blueLights(leds);
+    FastLED.delay(100);  
+    blackLights(leds);
+}
+
+void WTFButton::calibrateTeensy(CRGB *leds) {
     blueLights(leds);
     long threshold = 0;
-    for (int i = 0; i < 5000; i++) {
+    for (int i = 0; i < 10000; i++) {
         threshold = max(threshold, touchRead(sensePin));
     }
     senseThreshold = threshold + senseItivity;
@@ -31,10 +45,27 @@ void WTFButton::calibrate(CRGB *leds) {
     blackLights(leds);
 }
 
+void WTFButton::checkState(unsigned long time, uint16_t *mprStates) {
+    if ( (*mprStates & _BV(sensePin) ) ) {
+       processState(time, true);
+    } else {
+       processState(time, false);
+    }
+}
+
+
 void WTFButton::checkState(unsigned long time) {
     senseCurrent = touchRead(sensePin);
     if (senseCurrent > senseThreshold ) {
-        if (state == false) {
+       processState(time, true);
+    } else {
+       processState(time, false);
+    }
+}
+
+void WTFButton::processState(unsigned long time, bool newState) {
+    if ( newState ) {
+        if ( !state ) {
              // Track when the button was first pressed for sorting purposes
              buttonPressed = time;
              state = true;                     
@@ -93,8 +124,8 @@ void WTFButton::updateLights(CRGB *leds) {
                            derpout(pixelColor.r, fadeTime), 
                            derpout(pixelColor.g, fadeTime), 
                            derpout(pixelColor.b, fadeTime)
-                       );                       
-           } else {
+                       ); 
+           } else {              
                leds[physicalLayout[ypos][xpos]] = BLACK;
            }
        }
