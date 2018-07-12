@@ -5,7 +5,11 @@
 #include <Chrono.h>
 #include <FastLED.h>
 
-extern int physicalLayout[15][12];
+#include "Adafruit_MPR121.h"
+
+extern Adafruit_MPR121 cap;
+
+extern int physicalLayout[16][12];
 
 class WTFButton {
     private:
@@ -36,18 +40,14 @@ class WTFButton {
           return buttonPressed < other.buttonPressed;
         }
 
-        void calibrate(CRGB *leds);
-        void calibrateTeensy(CRGB *leds);
-        void calibrateMPR121(CRGB *leds);
+        void calibrate();
+        void calibrate(uint16_t *mprStates);
 
         void checkState(unsigned long time);
         void checkState(unsigned long time, uint16_t *mprStates);
         void processState(unsigned long time, bool newState);
-        
-        void drawColor(CRGB *leds, int r, int g, int b);
-        void blackLights(CRGB *leds);
-        void blueLights(CRGB *leds);                
-        void updateLights(CRGB *leds);
+                 
+        void updateLights(CRGB leds[]);
         
 };
 

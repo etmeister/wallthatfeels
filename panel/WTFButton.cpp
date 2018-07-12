@@ -18,37 +18,34 @@ void WTFButton::Setup(int pin[2], int sensitivity, int offset[2], AnimationType 
         animation->set_timer(delayed);
 }
 
-void WTFButton::calibrate(CRGB *leds) {
-    if (senseController == 1) {
-        calibrateMPR121(leds);
-    } else {
-        calibrateTeensy(leds);
+void WTFButton::calibrate(uint16_t *mprStates) {
+    uint8_t threshold =  cap.readRegister8(MPR121_TOUCHTH_0 + 2*sensePin);
+    threshold = threshold + 5;
+    
+    if ( (*mprStates & _BV(sensePin) ) ) {
+          for (uint8_t i=0; i<12; i++) {
+          cap.writeRegister(MPR121_TOUCHTH_0 + 2*i, (threshold+5));
+          cap.writeRegister(MPR121_RELEASETH_0 + 2*i, (threshold+1)/2);   
+          }
+          threshold =  cap.readRegister8(MPR121_TOUCHTH_0 + 2*sensePin); 
+          Serial.print(sensePin);
+          Serial.print(": ");
+          Serial.println(threshold);
     }
 }
 
-void WTFButton::calibrateMPR121(CRGB *leds) {
-    blueLights(leds);
-    FastLED.delay(100);  
-    blackLights(leds);
-}
-
-void WTFButton::calibrateTeensy(CRGB *leds) {
-    blueLights(leds);
+void WTFButton::calibrate() {
     long threshold = 0;
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < 2000; i++) {
         threshold = max(threshold, touchRead(sensePin));
     }
     senseThreshold = threshold + senseItivity;
-    Serial.print(sensePin);
-    Serial.print(" done calibrating: ");
-    Serial.println(senseThreshold);
-    blackLights(leds);
 }
 
 void WTFButton::checkState(unsigned long time, uint16_t *mprStates) {
     if ( (*mprStates & _BV(sensePin) ) ) {
        processState(time, true);
-    } else {
+  } else {
        processState(time, false);
     }
 }
@@ -69,45 +66,35 @@ void WTFButton::processState(unsigned long time, bool newState) {
              // Track when the button was first pressed for sorting purposes
              buttonPressed = time;
              state = true;                     
+             Serial.print(senseController);  
+             Serial.print(":");  
+             Serial.print(sensePin);
+             Serial.println(" pressed");
+             Serial.print(physicalLayout[sectionOffset[1]][sectionOffset[0]]);
+             Serial.print(" to ");
+             Serial.println(physicalLayout[sectionOffset[1]+maestroSection->get_dimensions()->y-1][sectionOffset[0]+maestroSection->get_dimensions()->x-1]);
         }
         // Reset the timer each time we think the button is actively pressed.
         buttonTimer.restart();
-    } else if (buttonTimer.hasPassed(1000) ) {
+    } else if (buttonTimer.hasPassed(100) ) {
         // If we haven't reset the timer in at least a second, turn the button off
         if (state) {
             state = false;
             buttonPressed = 0;
             buttonTimer.restart();
+             Serial.print(senseController);  
+             Serial.print(":");  
+             Serial.print(sensePin);
+             Serial.println(" released");
         }
 
     }
 
 }
-
-void WTFButton::drawColor(CRGB *leds, int r, int g, int b) {
-   for (int x = 0; x < maestroSection->get_dimensions()->x; x++) {
-       for (int y = 0; y < maestroSection->get_dimensions()->y; y++) {
-           // Each button is part of an overall grid. sectionOffset updates the x,y values relative to that grid.
-           int ypos = sectionOffset[1] + y;
-           int xpos = sectionOffset[0] + x;
-          // physicalLayout determines the actual LED index for a particular point in the overall grid.
-           leds[physicalLayout[ypos][xpos]] = CRGB(r, g, b);
-       }
-    }
-}
-
-void WTFButton::blackLights(CRGB *leds) {
-    drawColor(leds, 0,0,0);
-    FastLED.show();          
-}
-void WTFButton::blueLights(CRGB *leds) {
-    drawColor(leds,0,0,75);
-    FastLED.show();          
-}
         
-void WTFButton::updateLights(CRGB *leds) {
+void WTFButton::updateLights(CRGB leds[]) {
    Colors::RGB pixelColor; 
-   float fadeTime = buttonTimer.elapsed() * .001;
+   float fadeTime = buttonTimer.elapsed() * .002;
    for (int x = 0; x < maestroSection->get_dimensions()->x; x++) {
        for (int y = 0; y < maestroSection->get_dimensions()->y; y++) {
            pixelColor = maestro->get_pixel_color(maestroSectionId, x, y);
@@ -115,9 +102,10 @@ void WTFButton::updateLights(CRGB *leds) {
            int ypos = sectionOffset[1] + y;
            int xpos = sectionOffset[0] + x;
           // physicalLayout determines the actual LED index for a particular point in the overall grid.
-           if ( state ) {
+           if (physicalLayout[ypos][xpos] < 150) {
+            if ( state ) {
                leds[physicalLayout[ypos][xpos]] = CRGB(pixelColor.r, pixelColor.g, pixelColor.b);
-           } else if (buttonTimer.elapsed() < 1000 ) {
+           } else if (buttonTimer.elapsed() < 500 ) {
                // derpout is a linear interpolation to 0, used to fade the pixels to black after a button is deactivated.
                // fadeTime is a 0->1 value representing progress 
                leds[physicalLayout[ypos][xpos]] = CRGB(
@@ -127,6 +115,7 @@ void WTFButton::updateLights(CRGB *leds) {
                        ); 
            } else {              
                leds[physicalLayout[ypos][xpos]] = BLACK;
+           }
            }
        }
     }          
