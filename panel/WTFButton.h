@@ -1,11 +1,15 @@
-#ifndef WTFBUTTON_DEFINED
+  #ifndef WTFBUTTON_DEFINED
 #define WTFBUTTON_DEFINED
 #include <PixelMaestro.h>
 #include <core/maestro.h>
 #include <Chrono.h>
 #include <FastLED.h>
 
-extern int physicalLayout[6][12];
+#include "Adafruit_MPR121-Wire1.h"
+
+extern Adafruit_MPR121 cap;
+
+extern int physicalLayout[32][12];
 
 class WTFButton {
     private:
@@ -21,6 +25,8 @@ class WTFButton {
         long senseThreshold;
         long senseCurrent;
         int sensePin;
+        int senseController;
+
         int senseItivity;
         unsigned long buttonPressed;
         Chrono buttonTimer;
@@ -28,23 +34,20 @@ class WTFButton {
         WTFButton(){
         }
 
-    void Setup(int pin, int sensitivity, int offset[2], AnimationType buttonAnimation, int delayed, Section* section, int sectionId, Maestro* m);
+        void Setup(int pin[2], int sensitivity, int offset[2], AnimationType buttonAnimations[], int delayed, Section* section, int sectionId, Maestro* m);
 
-    bool operator< (const WTFButton &other) const {
-      return buttonPressed <= other.buttonPressed;
-    }
-    
-    
-    
+        bool operator< (const WTFButton &other) const {
+          return buttonPressed < other.buttonPressed;
+        }
 
-        void calibrate(CRGB *leds);
-        void drawColor(CRGB *leds, int r, int g, int b);
+        void calibrate();
+        void calibrate(uint16_t *mprStates);
+
         void checkState(unsigned long time);
-        void blackLights(CRGB *leds);
-
-        void blueLights(CRGB *leds);
-                
-        void updateLights(CRGB *leds);
+        void checkState(unsigned long time, uint16_t *mprStates);
+        void processState(unsigned long time, bool newState);
+                 
+        void updateLights(CRGB leds[]);
         
 };
 
