@@ -17,7 +17,7 @@ void WTFButtonSet<numButtons, section_x, section_y>::updateButtonSet(int pins[][
     Serial.println(numButtons);
     for (int i = 0; i < numButtons; i++) {
       
-        buttons[i].Setup(pins[i], sensitivity, sectionOffsets[i], animations[i], delayed, &sections[i], i, &maestro);
+        buttons[i].Setup(pins[i], sensitivity, sectionOffsets[i], animations, delayed, &sections[i], i, &maestro);
     }
     calibrateButtons();
 }
@@ -35,19 +35,6 @@ void WTFButtonSet<numButtons, section_x, section_y>::calibrateButtons() {
             Serial.println(button.senseThreshold);
         }
     }
-    
-    Serial.println("Calibrating MPR...");
-   /* for ( int i = 0; i < 2000; i++ ) {
-        if (mprFound) {
-            mprStates = cap.touched();
-        }
-        for ( WTFButton &button : buttons ) {
-            if (button.senseController == 1) {
-                button.calibrate(&mprStates);
-            }
-        }
-    }*/
-    
 }
 
 template <int numButtons, int section_x, int section_y>
@@ -55,6 +42,7 @@ void WTFButtonSet<numButtons, section_x, section_y>::checkStates(unsigned long t
     if (mprFound) {
         mprStates = cap.touched();
     }
+    Serial.print("[false");
     for ( WTFButton &button : buttons ) {
           if (button.senseController == 1)  {
              if(mprFound) {
@@ -63,8 +51,9 @@ void WTFButtonSet<numButtons, section_x, section_y>::checkStates(unsigned long t
           } else {
               button.checkState(time);
           }
-    }    
-   std::sort(buttons, buttons+numButtons);
+    }
+    Serial.println("]");
+    std::sort(buttons, buttons+numButtons);
     
 }
 

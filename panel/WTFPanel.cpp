@@ -8,19 +8,19 @@
 using namespace std;
 
 
-#include <Wire.h>
-#include "Adafruit_MPR121.h"
+#include <i2c_t3.h>
+#include "Adafruit_MPR121-Wire1.h"
 #include <FastLED.h>
 #include <Chrono.h>
 
 #define NUM_LEDS 150
 #define DATA_PIN 13
 
-#define NUM_BUTTONS 24
+#define NUM_BUTTONS 24      
 #define SECTION_X 4
-#define SECTION_Y 2
+#define SECTION_Y 4
 #define TOTAL_X 12
-#define TOTAL_Y 16
+#define TOTAL_Y 32  
 
 // array of led colors used by FastLED.show() to drive LED strips
 CRGB leds[NUM_LEDS];
@@ -40,27 +40,27 @@ Adafruit_MPR121 cap = Adafruit_MPR121();
 //int sectionOffsets[NUM_BUTTONS][2] = { {8, 0}, {8, 3}, {4, 3}, { 0,3 },  {0,0}, { 4,0} };
 
 int sectionOffsets[NUM_BUTTONS][2] = { 
-{0,0}, {4,0}, {8,0},
-{0,2}, {4,2}, {8,2},
-{0,4}, {4,4}, {8,4},
-{0,6}, {4,6}, {8,6},
-{0,8}, {4,8}, {8,8},
-{0,10}, {4,10}, {8,10},
-{0,12}, {4,12}, {8,12},
-{0,14}, {4,14}, {8,14}
+  {0,0}, {4,0}, {8,0},
+  {0,4}, {4,4}, {8,4},
+  {0,8}, {4,8}, {8,8},
+  {0,12}, {4,12}, {8,12},
+  {0,16}, {4,16}, {8,16},
+  {0,20}, {4,20}, {8,20},
+  {0,24}, {4,24}, {8,24},
+  {0,28}, {4,28}, {8,28}
 };
 
 // Pins on the microcontroller that the capacitive sensors are connected to
 int touchPin[NUM_BUTTONS][2] = { 
-  {23,0}, {23,0}, {23,0}, 
-  {23,0}, {23,0}, {23,0},
-  {0,1},  {2,1}, {4,1},
-  {5,1},  {7,1},  {10,1},
-  {11,1}, {6,1} , {3, 1},
-  {9,1}, {8,1}, {1,1},
-  {0,0}, {1,0}, {16,0}, 
-  {22,0}, {17,0}, {15,0}  
-  };
+  {4,1},  {5,1}, {7,1},
+  {2,1},  {6,1},  {8,1},
+  {1,1}, {3,1} , {10, 1},
+  {0,1}, {11,1}, {9,1},
+  {32,0}, {15,0}, {16,0}, 
+  {33,0}, {25,0}, {17,0},
+  {1,0}, {0,0}, {18,0}, 
+  {23,0}, {22,0}, {19,0}
+};
 
 /* 
  This represents the overall mapping of sections to LEDs.  Each entry is a position in leds[] for a physical LED.
@@ -70,39 +70,56 @@ int touchPin[NUM_BUTTONS][2] = {
  Specifically, 6 4x3 sections are laid out in a 3x2 grid, with one overlapping row of pixels on any shared edge.
  
 */
+
+// SQUARE BOARD
+
 int physicalLayout[TOTAL_Y][TOTAL_X] = {
-{0,1,2,3,4,5,5,6,7,8,9,150},
-{150,19,18,17,16,15,15,14,13,12,11,10},
-{20,21,22,23,24,25,25,26,27,28,29,30},
-{40,39,38,37,36,35,35,34,33,32,31,150},
-{150,41,42,43,44,45,45,46,47,48,49,150},
-{60,59,58,57,56,55,55,54,53,52,51,50},
-{150,61,62,63,64,65,65,66,67,68,69,70},
-{80,79,78,77,76,75,75,74,73,72,71,150},
-{80,79,78,77,76,75,75,74,73,72,71,150},
-{150,81,82,83,84,85,85,86,87,88,89,90},
-{100,99,98,97,96,95,95,94,93,92,91,150},
-{150,101,102,103,104,105,105,106,107,108,109,110},
-{120,124,119,118,117,116,115,115,114,113,112,111},
-{122,121,118,125,126,127,127,128,129,130,131,132},
-{150,150,123,139,138,137,137,136,135,134,133,150},
-{141,140,142,143,144,145,145,146,147,148,149,150}};
+  {150,150,150,150,64,150,66,150,150,150,114,150},
+  {150,24,150,150,150,65,150,67,150,113,150,115},
+  {23,150,25,150,63,150,68,150,150,112,116,150},
+  {22,150,26,150,62,150,150,150,150,150,118,117},
+  {150,21,150,150,150,69,150,150,111,150,150,150},
+  {20,150,27,150,61,150,70,110,150,119,150,150},
+  {150,19,28,150,60,71,150,150,109,150,120,121},
+  {150,150,150,150,150,150,150,150,150,150,150,150},
+  {18,150,29,59,150,150,72,108,150,150,150,122},
+  {150,150,150,150,150,73,150,150,150,124,123,150},
+  {150,17,30,150,58,150,74,107,150,125,126,150},
+  {16,150,31,150,57,75,150,106,150,150,150,150},
+  {150,150,150,150,150,150,150,150,105,150,150,127},
+  {150,32,150,15,56,150,76,104,150,129,128,150}, 
+  {150,14,150,33,55,77,150,150,103,130,131,150},
+  {150,13,150,34,150,150,150,150,150,150,150,132},
+  {12,150,150,150,54,150,78,102,150,133,150,150},
+  {150,150,35,53,150,79,150,150,101,150,135,150},
+  {150,11,36,150,52,80,150,100,150,134,136,150},
+  {10,150,37,150,51,81,150,150,99,150,150,137},
+  {150,9,150,150,150,150,150,98,150,150,138,150},
+  {8,150,150,38,50,150,82,150,97,139,150,150},
+  {150,7,150,39,150,49,83,150,96,150,140,141},
+  {150,150,150,150,150,150,150,150,150,150,142,150},
+  {6,150,150,40,48,150,84,150,95,150,150,150},
+  {150,150,5,150,150,47,150,85,150,143,150,144},
+  {150,4,150,41,150,46,86,150,94,150,145,150},
+  {150,3,150,42,48,150,150,87,93,150,146,150},
+  {2,150,150,150,150,45,88,150,150,92,150,147},
+  {150,1,43,150,44,150,89,150,91,150,150,150},
+  {0,150,150,150,150,150,150,90,150,149,148,150},
+  {150,150,150,150,150,150,150,150,150,150,150,150},
+};
+
+  
 
 
 // Amount of variance in capacity required to activate a button
-int SENSITIVITY=100;
+int SENSITIVITY=20;
 
 // List of animations to apply to sections, one-to-one mapping.
-AnimationType animations[NUM_BUTTONS] = { 
-  AnimationType::Plasma, AnimationType::Wave,  AnimationType::Plasma, AnimationType::Wave, 
-  AnimationType::Plasma, AnimationType::Wave,  AnimationType::Plasma, AnimationType::Wave, 
-  AnimationType::Plasma, AnimationType::Wave,  AnimationType::Plasma, AnimationType::Wave, 
-  AnimationType::Plasma, AnimationType::Wave,  AnimationType::Plasma, AnimationType::Wave, 
-  AnimationType::Plasma, AnimationType::Wave,  AnimationType::Plasma, AnimationType::Wave,
-  AnimationType::Plasma, AnimationType::Wave,  AnimationType::Plasma, AnimationType::Wave
+AnimationType animations[2] = { 
+  AnimationType::Plasma, AnimationType::Wave
 };
 // variables controlling animation 
-const int MAXBRIGHT = 100;
+const int MAXBRIGHT = 255;
 int DELAY=200;
 
 // Create the set of buttons and the maestro animator object
@@ -141,12 +158,17 @@ void colorCheck() {
 void setup()
 {   
     Serial.begin(38400);
+    
+  char ID[32];
+  sprintf(ID, "%08lX %08lX %08lX %08lX", SIM_UIDH, SIM_UIDMH, SIM_UIDML, SIM_UIDL);
     Serial.println("Beginning setup");
     // Configure global brightness, map the buttons, enable the LEDs, and calibrate the buttons.
-    FastLED.addLeds<WS2811, DATA_PIN, RGB>(leds, NUM_LEDS);
     pinMode(DATA_PIN, OUTPUT);
+    FastLED.addLeds<WS2811, DATA_PIN, RGB>(leds, NUM_LEDS);
     buttonSet.updateButtonSet( touchPin, SENSITIVITY, sectionOffsets , animations, DELAY, MAXBRIGHT);
     colorCheck();
+      Serial.println(ID);
+
     Serial.println("Ending setup");
 
 }

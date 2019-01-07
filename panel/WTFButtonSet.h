@@ -2,7 +2,7 @@
 #define WTFBUTTONSET_DEFINED
 #include "WTFButton.h"
 
-#include "Adafruit_MPR121.h"
+#include "Adafruit_MPR121-Wire1.h"
 
 extern Adafruit_MPR121 cap;
 

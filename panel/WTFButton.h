@@ -1,15 +1,15 @@
-#ifndef WTFBUTTON_DEFINED
+  #ifndef WTFBUTTON_DEFINED
 #define WTFBUTTON_DEFINED
 #include <PixelMaestro.h>
 #include <core/maestro.h>
 #include <Chrono.h>
 #include <FastLED.h>
 
-#include "Adafruit_MPR121.h"
+#include "Adafruit_MPR121-Wire1.h"
 
 extern Adafruit_MPR121 cap;
 
-extern int physicalLayout[16][12];
+extern int physicalLayout[32][12];
 
 class WTFButton {
     private:
@@ -34,7 +34,7 @@ class WTFButton {
         WTFButton(){
         }
 
-        void Setup(int pin[2], int sensitivity, int offset[2], AnimationType buttonAnimation, int delayed, Section* section, int sectionId, Maestro* m);
+        void Setup(int pin[2], int sensitivity, int offset[2], AnimationType buttonAnimations[], int delayed, Section* section, int sectionId, Maestro* m);
 
         bool operator< (const WTFButton &other) const {
           return buttonPressed < other.buttonPressed;
