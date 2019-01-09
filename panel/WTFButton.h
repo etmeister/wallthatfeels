@@ -1,23 +1,22 @@
-  #ifndef WTFBUTTON_DEFINED
+#ifndef WTFBUTTON_DEFINED
 #define WTFBUTTON_DEFINED
 #include <PixelMaestro.h>
 #include <core/maestro.h>
 #include <Chrono.h>
 #include <FastLED.h>
-
-#include "Adafruit_MPR121-Wire1.h"
+#include "WTFPanel.h"
 
 extern Adafruit_MPR121 cap;
 
-extern int physicalLayout[32][12];
+extern int physicalLayout[TOTAL_Y][TOTAL_X];
 
 class WTFButton {
     private:
         int *sectionOffset;
         int buttonActivated;
-        Animation* animation;
 
     public:
+        Animation* animation;
         Maestro* maestro;
         bool state;
         Section* maestroSection;
@@ -25,6 +24,7 @@ class WTFButton {
         long senseThreshold;
         long senseCurrent;
         int sensePin;
+        int currentPalette;
         int senseController;
 
         int senseItivity;
@@ -42,11 +42,12 @@ class WTFButton {
 
         void calibrate();
         void calibrate(uint16_t *mprStates);
-
-        void checkState(unsigned long time);
-        void checkState(unsigned long time, uint16_t *mprStates);
-        void processState(unsigned long time, bool newState);
+ 
+        bool checkState(unsigned long time);
+        bool checkState(unsigned long time, uint16_t *mprStates);
+        bool processState(unsigned long time, bool newState);
                  
+        void forceLights(CRGB leds[], CRGB color);
         void updateLights(CRGB leds[]);
         
 };
