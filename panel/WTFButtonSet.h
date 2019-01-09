@@ -2,9 +2,15 @@
 #define WTFBUTTONSET_DEFINED
 #include "WTFButton.h"
 
-#include "Adafruit_MPR121-Wire1.h"
+#include "WTFPanel.h"
 
 extern Adafruit_MPR121 cap;
+extern Palette palettes[15];
+extern CFastLED FastLED;
+struct buttonResults {
+    unsigned long latest;
+    int color;
+};
 
 template <int numButtons, int section_x, int section_y>
 class WTFButtonSet {
@@ -44,12 +50,13 @@ class WTFButtonSet {
     WTFButton buttons[numButtons];
     Maestro maestro;
     WTFButtonSet(): maestro(sections,numButtons) { }
-    void updateButtonSet(int pins[][2], int sensitivity, int sectionOffsets[][2], AnimationType animations[], int delayed, int brightness);
+    void updateButtonSet(int pins[][2], int sensitivity, int sectionOffsets[][2], AnimationType animations[], int delayed, int brightness, CRGB leds[]);
 
-    void calibrateButtons();
+    void calibrateButtons(CRGB leds[]);
     
     void checkStates(unsigned long time);
-    
+    int checkNeighbors(WTFButton button);
+    void getColor(int buttonY, int buttonX, buttonResults* choice);
     void updateLights(CRGB leds[]);
 };
 

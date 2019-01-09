@@ -10,12 +10,17 @@ void WTFButton::Setup(int pin[2], int sensitivity, int offset[2], AnimationType 
         senseController = pin[1];
         maestroSection = section;
         maestroSectionId = sectionId;
+        senseThreshold = 0;
         maestro = m;
+        state = false;
+        buttonPressed = 0;
+        currentPalette = 16;
         senseItivity = sensitivity;
         sectionOffset = offset;
         animation = maestroSection->set_animation(buttonAnimations[0]);
         animation->set_palette(&ColorPresets::Colorwheel_Palette);
         animation->set_timer(delayed);
+        buttonTimer.restart();
 }
 
 void WTFButton::calibrate(uint16_t *mprStates) {
@@ -25,46 +30,42 @@ void WTFButton::calibrate(uint16_t *mprStates) {
 }
 
 void WTFButton::calibrate() {
-    long threshold = 0;
-    for (int i = 0; i < 4000; i++) {
-        threshold = max(threshold, touchRead(sensePin));
+    long threshold = touchRead(sensePin);
+    if (threshold > senseThreshold) {
+        senseThreshold = threshold + senseItivity;
     }
-    senseThreshold = threshold + senseItivity;
 }
 
-void WTFButton::checkState(unsigned long time, uint16_t *mprStates) {
+bool WTFButton::checkState(unsigned long time, uint16_t *mprStates) {
     if ( (*mprStates & _BV(sensePin) ) ) {
-       processState(time, true);
+       return processState(time, true);
   } else {
-       processState(time, false);
+       return processState(time, false);
     }
 }
 
 
-void WTFButton::checkState(unsigned long time) {
+bool WTFButton::checkState(unsigned long time) {
     senseCurrent = touchRead(sensePin);
     if (senseCurrent > senseThreshold ) {
-       processState(time, true);
+       return processState(time, true);
     } else {
-       processState(time, false);
+       return processState(time, false);
     }
 }
 
-void WTFButton::processState(unsigned long time, bool newState) {
+bool WTFButton::processState(unsigned long time, bool newState) {
+    bool pressed = false;
     if ( newState ) {
-        Serial.print(",\"");
-        Serial.print(senseController);
-        Serial.print(":");
-        Serial.print(sensePin);
-        Serial.print("\"");
         if ( !state ) {
              // Track when the button was first pressed for sorting purposes
              buttonPressed = time;
-             state = true;                     
+             state = true;
+             pressed = true;                     
         }
         // Reset the timer each time we think the button is actively pressed.
         buttonTimer.restart();
-    } else if (buttonTimer.hasPassed(20) ) {
+    } else if (buttonTimer.hasPassed(200) ) {
         // If we haven't reset the timer in at least a second, turn the button off
         if (state) {
             state = false;
@@ -73,7 +74,21 @@ void WTFButton::processState(unsigned long time, bool newState) {
         }
 
     }
+    return pressed;
+}
 
+void WTFButton::forceLights(CRGB leds[], CRGB color) {
+   for (int x = 0; x < maestroSection->get_dimensions()->x; x++) {
+       for (int y = 0; y < maestroSection->get_dimensions()->y; y++) {
+           // Each button is part of an overall grid. sectionOffset updates the x,y values relative to that grid.
+           int ypos = sectionOffset[1] + y;
+           int xpos = sectionOffset[0] + x;
+          // physicalLayout determines the actual LED index for a particular point in the overall grid.
+           if (physicalLayout[ypos][xpos] < 150) {
+               leds[physicalLayout[ypos][xpos]] = color;
+           }
+       }
+    }          
 }
         
 void WTFButton::updateLights(CRGB leds[]) {
